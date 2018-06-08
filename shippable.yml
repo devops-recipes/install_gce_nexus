@@ -1,0 +1,36 @@
+resources:
+# Automation scripts repo
+  - name: install_gce_nexus_repo
+    type: gitRepo
+    integration: "drship_github"
+    versionTemplate:
+      sourceName: "devops-recipes/install_gce_nexus"
+      branch: master
+
+# cliConfig for configuring gcloud cli
+  - name: gcp_gcloud_cli
+    type: cliConfig
+    integration: "drship_gcp"
+
+jobs:
+# Install nexus on gce
+  - name: install_gce_nexus
+    type: runSh
+    steps:
+      - IN: gcp_gcloud_cli
+      - IN: install_gce_nexus_repo
+        switch: off
+      - IN: gcp_gce_info
+        switch: off
+      - TASK:
+          name: install_nexus
+          script:
+            - pushd $(shipctl get_resource_state "install_gce_nexus_repo")
+            - gcloud compute scp ./install_nexus.sh dev:~/install_nexus.sh --zone $gce_zone
+            - gcloud compute ssh $gce_name --zone $gce_zone --command="chmod +x ~/install_nexus.sh"
+            - gcloud compute ssh $gce_name --zone $gce_zone --command="~/install_nexus.sh"
+            - popd
+    flags:
+      - gce_nexus
+      - gce
+      - nexus
